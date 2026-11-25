@@ -64,32 +64,38 @@ h1 { margin: 14px 0 0; font-weight: 600; font-size: 54px; line-height: .9; lette
   background: rgba(20,20,20,.08);
   display: grid; place-items: center;
 }
-.disc {
-  width: 92%; aspect-ratio: 1; border-radius: 50%;
-  position: relative; border: 3px solid var(--white);
-  background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0 3px, rgba(255,255,255,.12) 3px 4px),
-    conic-gradient(from 20deg, #fff 0deg, #f7b6d1 40deg, #ED84B0 70deg, #ffe3ef 110deg, #fff 150deg, #f3a2c4 200deg, #ED84B0 235deg, #ffeaf3 280deg, #fff 320deg, #f7b6d1 360deg);
-  animation: spin var(--spin) linear infinite;
+.cdwrap { /* a real silver cd: the light streaks stay put while the disc spins under them */
+  width: 92%; aspect-ratio: 1; position: relative;
   transition: transform .45s cubic-bezier(.3,.7,.2,1), opacity .3s;
 }
-.disc::before { /* clear hub ring */
-  content: ""; position: absolute; left: 50%; top: 50%;
-  width: 30%; aspect-ratio: 1; transform: translate(-50%,-50%);
-  border-radius: 50%; background: rgba(255,238,245,.7); border: 2px solid var(--white);
+.cdwrap.ejecting { transform: scale(.82) translateY(6%); opacity: .4; }
+.cd, .disc { position: absolute; inset: 0; border-radius: 50%; }
+.cd {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0) 0 5.8%, rgba(236,239,237,.92) 6% 11.5%, rgba(255,255,255,.95) 11.5% 12.2%, rgba(214,219,216,.75) 12.2% 16.6%, rgba(255,255,255,.9) 16.6% 17.4%, rgba(255,255,255,0) 17.6%),
+    radial-gradient(circle, rgba(232,235,233,.55) 17%, rgba(232,235,233,0) 42%),
+    repeating-radial-gradient(circle, rgba(255,255,255,0) 0 2px, rgba(255,255,255,.18) 2px 3px),
+    radial-gradient(circle, rgba(255,255,255,0) 0 96.5%, rgba(255,255,255,.7) 97% 100%),
+    conic-gradient(from 0deg,
+      #e3e6e2 0deg, #f1dcea 18deg, #e0e5e1 38deg, #c8f3dc 62deg, #93edc0 78deg, #a9f2e2 88deg, #f7d9ec 97deg, #ffe9a8 104deg, #e1e5e1 124deg,
+      #e6e2e5 155deg, #f6cfe5 172deg, #e0e4e1 194deg,
+      #e1e5e1 222deg, #ffc7e4 244deg, #ff9fd0 256deg, #ffe98f 268deg, #b6f5cf 280deg, #c8f6ea 290deg, #e1e5e2 308deg,
+      #d8f3e4 330deg, #e3e6e2 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 5.6%, #000 5.8%);
+          mask: radial-gradient(circle, transparent 0 5.6%, #000 5.8%);
+  border: 2px solid rgba(255,255,255,.95);
 }
-.disc::after { /* spindle hole */
-  content: ""; position: absolute; left: 50%; top: 50%;
-  width: 11%; aspect-ratio: 1; transform: translate(-50%,-50%);
-  border-radius: 50%; background: var(--pink); border: 2px solid var(--white);
+.disc { animation: spin var(--spin) linear infinite; }
+.micro { /* the tiny stamped code on the hub */
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -32px);
+  font: 6px/1 "Space Mono", monospace; letter-spacing: .12em; color: #6f7472; white-space: nowrap;
 }
-.face { /* her sticker stuck on the disc, off the hub, like a burned cd */
+.face { /* her sticker sitting on top of the cd */
   position: absolute; left: 54%; top: 6%; width: 34%;
   rotate: 14deg;
 }
 .face img { width: 100%; display: block; }
 .disc.loading { animation-duration: .6s; }
-.disc.ejecting { transform: scale(.82) translateY(6%); opacity: .4; }
 
 .lcd {
   position: absolute; left: 14%; right: 14%; bottom: 0;
@@ -132,7 +138,8 @@ footer a { color: inherit; }
 
 @keyframes spin { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) {
-  .disc { animation: none; transition: none; }
+  .disc { animation: none; }
+  .cdwrap { transition: none; }
   ol a { transition: none; }
 }
 </style>
@@ -146,8 +153,12 @@ footer a { color: inherit; }
   <div class="player" aria-hidden="true">
     <div class="shell"></div>
     <div class="window">
-      <div class="disc" id="disc">
-        <div class="face"><img src="assets/face.png" alt=""></div>
+      <div class="cdwrap" id="cdwrap">
+        <div class="cd"></div>
+        <div class="disc" id="disc">
+          <span class="micro">0001 ✶ GGG</span>
+          <div class="face"><img src="assets/face.png" alt=""></div>
+        </div>
       </div>
     </div>
     <div class="lcd"><b id="lcd-title">01 free guides</b><span id="lcd-time">0:00</span></div>
@@ -175,6 +186,7 @@ footer a { color: inherit; }
 (() => {
   const links = [...document.querySelectorAll("#tracks a")];
   const disc = document.getElementById("disc");
+  const wrap = document.getElementById("cdwrap");
   const title = document.getElementById("lcd-title");
   const time = document.getElementById("lcd-time");
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -182,14 +194,14 @@ footer a { color: inherit; }
 
   const name = a => a.querySelector(".no").textContent + " " + a.querySelector(".t").firstChild.textContent.trim();
 
-  function load(i) {
+  function load(i, quiet) {
     cur = (i + links.length) % links.length;
     links.forEach((a, k) => a.setAttribute("aria-current", k === cur ? "true" : "false"));
     title.textContent = name(links[cur]);
     secs = 0;
-    if (calm) return;
-    disc.classList.add("ejecting");
-    setTimeout(() => disc.classList.remove("ejecting"), 260);
+    if (calm || quiet) return;
+    wrap.classList.add("ejecting");
+    setTimeout(() => wrap.classList.remove("ejecting"), 260);
   }
 
   function play() {
@@ -210,9 +222,9 @@ footer a { color: inherit; }
   document.getElementById("play").onclick = play;
 
   setInterval(() => { secs++; time.textContent = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"); }, 1000);
-  load(0);
+  load(0, true);
   // coming back via the back button: stop the fast spin
-  addEventListener("pageshow", () => disc.classList.remove("loading", "ejecting"));
+  addEventListener("pageshow", () => { disc.classList.remove("loading"); wrap.classList.remove("ejecting"); });
 })();
 </script>
 </body>
