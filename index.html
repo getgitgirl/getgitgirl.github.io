@@ -66,7 +66,7 @@ h1 { margin: 14px 0 0; font-weight: 600; font-size: 54px; line-height: .9; lette
   display: grid; place-items: center;
 }
 .cdwrap { container-type: inline-size; } 
-.cdwrap { /* a real silver cd: the light streaks stay put while the disc spins under them */
+.cdwrap { /* a real silver cd that spins, rainbow and all */
   width: 92%; aspect-ratio: 1; position: relative;
   transition: transform .45s cubic-bezier(.3,.7,.2,1), opacity .3s;
 }
@@ -165,8 +165,8 @@ footer a { color: inherit; }
     <div class="shell"></div>
     <div class="window">
       <div class="cdwrap" id="cdwrap">
-        <div class="cd"></div>
         <div class="disc" id="disc">
+          <div class="cd"></div>
           <span class="micro">0001 ✶ GGG</span>
           <span class="sharpie" id="sharpie">free guides</span>
           <div class="face"><img src="assets/face.png" alt=""></div>
